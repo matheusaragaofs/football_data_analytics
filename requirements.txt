@@ -1,0 +1,12 @@
+# Core dependencies for data extraction
+requests>=2.25.1
+beautifulsoup4>=4.9.3
+pandas>=1.3.0
+
+# Database connector for PostgreSQL (used by Airflow)
+psycopg2-binary>=2.8.6
+
+# Additional useful libraries for data processing
+lxml>=4.6.0
+
+geopy
