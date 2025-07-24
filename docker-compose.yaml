@@ -5,7 +5,6 @@ services:
     image: apache/airflow:2.6.0-python3.9
     command: webserver
     entrypoint: ["/opt/airflow/script/entrypoint.sh"]
-    # user: "${AIRFLOW_UID:-50000}:0"  # Comentado temporariamente para resolver permissões
     #    restart: always
     depends_on:
       - postgres
@@ -17,6 +16,10 @@ services:
       - AIRFLOW__WEBSERVER__SECRET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
       - AIRFLOW__CORE__REMOTE_LOGGING=False
       - AIRFLOW__CORE__LOCAL_TASK_LOG_DIRECTORY=/opt/airflow/logs
+      - AZURE_ACCOUNT_KEY=${AZURE_ACCOUNT_KEY}
+      - AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT}
+      - AZURE_CONTAINER=${AZURE_CONTAINER}
+      - AZURE_DATA_PATH=${AZURE_DATA_PATH}
     logging:
       options:
         max-size: 10m
@@ -55,7 +58,6 @@ services:
 
   scheduler:
     image: apache/airflow:2.6.0-python3.9
-    # user: "${AIRFLOW_UID:-50000}:0"  # Comentado temporariamente para resolver permissões
     #    restart: always
     depends_on:
       webserver:
@@ -74,6 +76,10 @@ services:
       - AIRFLOW__WEBSERVER__SECRET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
       - AIRFLOW__CORE__REMOTE_LOGGING=False
       - AIRFLOW__CORE__LOCAL_TASK_LOG_DIRECTORY=/opt/airflow/logs
+      - AZURE_ACCOUNT_KEY=${AZURE_ACCOUNT_KEY}
+      - AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT}
+      - AZURE_CONTAINER=${AZURE_CONTAINER}
+      - AZURE_DATA_PATH=${AZURE_DATA_PATH}
     command: bash -c "pip install --no-cache-dir -r ./requirements.txt && airflow db upgrade && airflow scheduler"
     networks:
       - confluent

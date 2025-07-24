@@ -1,6 +1,5 @@
 import json
 import pandas as pd
-import time
 import logging
 from geopy.geocoders import Nominatim
 
@@ -129,7 +128,6 @@ def transform_wikipedia_data(**kwargs):
     total_rows = len(stadiums_df)
     logger.info(f"Processing {total_rows} stadiums for testing...")
 
-    # Adicionar geocodificação com contador de linhas restantes
     def geocode_with_counter(row):
         remaining = total_rows - row.name
         return get_lat_long(row["country"], row["stadium"], remaining)
@@ -142,7 +140,6 @@ def transform_wikipedia_data(**kwargs):
 
     stadiums_df["capacity"] = stadiums_df["capacity"].astype(int)
 
-    # handle the duplicates
     duplicates = stadiums_df[stadiums_df.duplicated(["location"])]
     duplicate_count = len(duplicates)
 
@@ -158,11 +155,11 @@ def transform_wikipedia_data(**kwargs):
         )
     stadiums_df.update(duplicates)
 
-    # push to xcom
     kwargs["ti"].xcom_push(key="rows", value=stadiums_df.to_json())
 
 
 def write_wikipedia_data(**kwargs):
+    import os
     from datetime import datetime
 
     data = kwargs["ti"].xcom_pull(task_ids="transform_wikipedia_data", key="rows")
@@ -178,4 +175,29 @@ def write_wikipedia_data(**kwargs):
         + ".csv"
     )
 
-    stadiums_df.to_csv("/opt/airflow/data/" + file_name, index=False)
+    azure_account_key = os.getenv("AZURE_ACCOUNT_KEY")
+    azure_storage_account = os.getenv("AZURE_STORAGE_ACCOUNT")
+    azure_container = os.getenv("AZURE_CONTAINER")
+    azure_data_path = os.getenv("AZURE_DATA_PATH")
+
+    logger.info(f"AZURE_ACCOUNT_KEY loaded: {'Yes' if azure_account_key else 'No'}")
+    logger.info(
+        f"AZURE_STORAGE_ACCOUNT loaded: {'Yes' if azure_storage_account else 'No'}"
+    )
+    logger.info(f"AZURE_CONTAINER loaded: {'Yes' if azure_container else 'No'}")
+    logger.info(f"AZURE_DATA_PATH loaded: {'Yes' if azure_data_path else 'No'}")
+
+    try:
+        if not azure_account_key:
+            raise ValueError("AZURE_ACCOUNT_KEY not found in environment variables")
+
+        azure_path = f"abfs://{azure_container}@{azure_storage_account}.dfs.core.windows.net/{azure_data_path}/{file_name}"
+        logger.info(f"Attempting to upload to: {azure_path}")
+
+        stadiums_df.to_csv(
+            azure_path, storage_options={"account_key": azure_account_key}, index=False
+        )
+        logger.info(f"Data successfully uploaded to Azure: {azure_path}")
+
+    except Exception as e:
+        logger.warning(f"Failed to upload to Azure Blob Storage: {e}")
